@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import fcntl
 import os
 import re
 import shutil
@@ -48,6 +47,7 @@ def _state_locked():
                     pass
                 fh.close()
         else:
+            import fcntl
             try:
                 fcntl.flock(fh, fcntl.LOCK_EX)
                 yield
@@ -56,6 +56,7 @@ def _state_locked():
                     fcntl.flock(fh, fcntl.LOCK_UN)
                 finally:
                     fh.close()
+
 
 
 def _atomic_write(path: Path, text: str) -> None:
