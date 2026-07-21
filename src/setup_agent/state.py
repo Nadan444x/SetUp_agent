@@ -132,10 +132,12 @@ _RUNTIME_PROBES = [
 ]
 
 _IGNORE_PATTERNS = [
+    # System Runtimes & Frameworks
     "Microsoft.VCRedist", "Microsoft.VCLibs", "Microsoft.UI.Xaml",
     "Microsoft.NET", "Microsoft.Net", "Microsoft.DirectX", "Microsoft.DotNet",
     "Microsoft.Windows.AppRuntime", "Microsoft.WindowsAppRuntime", "Microsoft.DesktopAppInstaller",
     "Microsoft.AppInstaller", "Microsoft.GameInput", "Microsoft.Advertising",
+    # Pre-installed Windows Bloat / UWP Apps & Accessories
     "Microsoft.Bing", "Microsoft.GetHelp", "Microsoft.Getstarted",
     "Microsoft.HEIFImageExtension", "Microsoft.VP9VideoExtensions",
     "Microsoft.WebMediaExtensions", "Microsoft.WebpImageExtension",
@@ -144,9 +146,26 @@ _IGNORE_PATTERNS = [
     "Microsoft.YourPhone", "Microsoft.ZuneMusic", "Microsoft.ZuneVideo",
     "Microsoft.WindowsStore", "Microsoft.WindowsMaps", "Microsoft.WindowsCamera",
     "Microsoft.WindowsAlarms", "Microsoft.WindowsCalculator", "Microsoft.WindowsSoundRecorder",
+    "Microsoft.Xbox", "Microsoft.GamingServices", "Microsoft.ScreenSketch", "Microsoft.WindowsNotepad",
+    "Microsoft.windowscommunicationsapps", "MicrosoftCorporationII", "Microsoft.SecHealthUI",
+    "Microsoft.StartExperiencesApp", "Microsoft.StorePurchaseApp", "Microsoft.WidgetsPlatformRuntime",
+    "Microsoft.Windows.DevHome", "Microsoft.ApplicationCompatibilityEnhancements", "Microsoft.Winget.Source",
+    "MicrosoftWindows.Client.WebExperience", "MicrosoftWindows.CrossDevice", "MicrosoftWindows.Speech",
+    "Microsoft.Ink", "Microsoft.AVCEncoder", "Microsoft.HEVC", "Microsoft.Family", "Microsoft.People",
+    "Microsoft.MicrosoftJournal", "Microsoft.MicrosoftStickyNotes", "Microsoft.Whiteboard",
+    "Microsoft.Office.ActionsServer", "Microsoft.OfficePushNotificationUtility", "Microsoft.Todos",
+    "Microsoft.6365217CE6EB4", "aimgr_", "WinAppRuntime", "QuickAssist", "MixedReality.Portal",
+    # Hardware & OEM System Utilities
     "Nvidia.", "PhysX", "Redistributable", "Runtime Package", "System Software",
     "Desktop Runtime", "SDK", "Driver", "Framework Package", "Native Framework",
+    "AppUp.Intel", "LenovoUtility", "LenovoCompanion", "VantageSRV",
+    "EPSON.EpsonScan2", "EPSON.SoftwareUpdater", "Epson Customer", "Printer Uninstall",
+    "vs_CoreEditorFonts", "Microsoft Visual Studio Installer", "Update Health Tools",
+    "BlueStacksServices", "SnoreToast",
+    # Inner Games (when Steam itself is captured)
+    "Counter-Strike 2",
 ]
+
 
 
 def _lines(command: str) -> list[str]:
