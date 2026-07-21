@@ -1,0 +1,47 @@
+"""Windows desktop notifications — one place, used across the app.
+
+Every notification is also appended to ~/.setup-agent/logs/notifications.log.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import subprocess
+from datetime import datetime
+from pathlib import Path
+
+NOTIFY_LOG = Path.home() / ".setup-agent" / "logs" / "notifications.log"
+
+
+def enabled() -> bool:
+    return os.environ.get("SETUP_AGENT_NOTIFY", "1") != "0"
+
+
+def _log(title: str, message: str) -> None:
+    try:
+        NOTIFY_LOG.parent.mkdir(parents=True, exist_ok=True)
+        with NOTIFY_LOG.open("a", encoding="utf-8") as fh:
+            fh.write(f"{datetime.now():%Y-%m-%d %H:%M:%S}  {title}: {message}\n")
+    except OSError:
+        pass
+
+
+def notify(title: str, message: str, subtitle: str = "") -> None:
+    if not enabled():
+        return
+    _log(title, message)
+    try:
+        title_json = json.dumps(title)
+        msg_json = json.dumps(message)
+        # PowerShell Script to display Toast Notification on Windows
+        ps_script = (
+            f"[reflection.assembly]::loadwithpartialname('System.Windows.Forms') | Out-Null; "
+            f"$notify = New-Object System.Windows.Forms.NotifyIcon; "
+            f"$notify.Icon = [System.Drawing.SystemIcons]::Information; "
+            f"$notify.Visible = $true; "
+            f"$notify.ShowBalloonTip(5000, {title_json}, {msg_json}, [System.Windows.Forms.ToolTipIcon]::Info);"
+        )
+        subprocess.run(["powershell", "-NoProfile", "-Command", ps_script], capture_output=True, timeout=10)
+    except Exception:
+        pass

@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How SetUp Agent works — the agent loop</title>
+<style>
+  :root {
+    --ink: #24222b; --paper: #faf7f2; --card: #ffffff; --line: #e4ddd2;
+    --accent: #d97706; --accent-soft: #fef3e2; --llm: #7c3aed; --llm-soft: #f3eefe;
+    --safe: #0e7490; --safe-soft: #e6f6fa; --exec: #15803d; --exec-soft: #e9f7ee;
+    --file: #b45309; --file-soft: #fdf6e3; --danger: #b91c1c; --danger-soft: #fdeaea;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: var(--paper); color: var(--ink); font: 16px/1.65 -apple-system, "Segoe UI", sans-serif; padding: 48px 20px 80px; }
+  .wrap { max-width: 880px; margin: 0 auto; }
+  h1 { font-size: 34px; line-height: 1.2; letter-spacing: -0.5px; }
+  h1 span { color: var(--accent); }
+  .sub { color: #6b6459; margin: 10px 0 40px; font-size: 18px; }
+  h2 { font-size: 22px; margin: 48px 0 14px; }
+  p.note { color: #6b6459; margin-bottom: 18px; }
+  .stage { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 28px; }
+  .row { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; align-items: stretch; }
+  .box { flex: 1 1 150px; min-width: 150px; border-radius: 12px; padding: 14px 16px; border: 2px solid; }
+  .box h3 { font-size: 14px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+  .box p { font-size: 13.5px; line-height: 1.5; }
+  .llm  { border-color: var(--llm);  background: var(--llm-soft); }  .llm h3  { color: var(--llm); }
+  .safe { border-color: var(--safe); background: var(--safe-soft); } .safe h3 { color: var(--safe); }
+  .exec { border-color: var(--exec); background: var(--exec-soft); } .exec h3 { color: var(--exec); }
+  .file { border-color: var(--file); background: var(--file-soft); } .file h3 { color: var(--file); }
+  .arrow { align-self: center; font-size: 22px; color: #a89f90; padding: 0 2px; }
+  .loopback { text-align: center; color: #a89f90; font-size: 14px; margin-top: 10px; }
+  .step { display: flex; gap: 16px; margin: 18px 0; align-items: flex-start; }
+  .num { flex: 0 0 34px; height: 34px; border-radius: 50%; background: var(--accent); color: #fff; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  .step b { display: block; margin-bottom: 2px; }
+  .chat { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 22px; font-size: 14.5px; }
+  .msg { padding: 10px 14px; border-radius: 10px; margin: 10px 0; max-width: 92%; }
+  .m-user { background: var(--accent-soft); border-left: 4px solid var(--accent); }
+  .m-llm  { background: var(--llm-soft);  border-left: 4px solid var(--llm); }
+  .m-tool { background: var(--exec-soft); border-left: 4px solid var(--exec); font-family: ui-monospace, monospace; font-size: 13px; }
+  .m-file { background: var(--file-soft); border-left: 4px solid var(--file); font-family: ui-monospace, monospace; font-size: 13px; }
+  .who { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; opacity: .65; display: block; margin-bottom: 3px; }
+  .guards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
+  .guard { background: var(--card); border: 1px solid var(--line); border-left: 5px solid var(--danger); border-radius: 12px; padding: 16px; }
+  .guard.softer { border-left-color: var(--safe); }
+  .guard b { display: block; margin-bottom: 4px; }
+  .guard p { font-size: 13.5px; color: #55504a; }
+  code { background: #f1ece3; border-radius: 5px; padding: 1px 6px; font-size: 0.9em; }
+  .foot { margin-top: 56px; color: #a89f90; font-size: 13px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>How <span>SetUp Agent</span> works</h1>
+  <p class="sub">One page, ground-up: how a <b>local LLM</b> safely sets up your whole Mac from the terminal.</p>
+
+  <h2>1 · The big picture</h2>
+  <p class="note">A script is a fixed list of commands. An <b>agent</b> looks at what just happened and chooses the next step. The safety trick: the LLM can only <i>ask</i> — Python decides.</p>
+  <div class="stage">
+    <div class="row">
+      <div class="box llm"><h3>🧠 Local LLM</h3><p>qwen2.5 via Ollama, running <b>on your Mac</b>. Reads the goal + <code>Setup.md</code>, proposes one <b>tool call</b> at a time. Never touches the system.</p></div>
+      <div class="arrow">→</div>
+      <div class="box safe"><h3>🛡 Safety layer</h3><p>Blocklist (<code>rm -rf /</code>…), <b>no sudo</b>, dry-run mode, and a y/N prompt showing the exact command.</p></div>
+      <div class="arrow">→</div>
+      <div class="box exec"><h3>⚙️ Executor</h3><p>Runs the real command (<code>brew install…</code>, <code>defaults write…</code>) with a timeout, captures the output.</p></div>
+      <div class="arrow">→</div>
+      <div class="box file"><h3>📄 Setup.md</h3><p>The <b>living system file</b>: every success is recorded here with a timestamp — the recipe for your next laptop.</p></div>
+    </div>
+    <div class="loopback">⤴ the result goes back to the LLM, which picks the next step — until nothing is left to do</div>
+  </div>
+
+  <h2>2 · One real turn, message by message</h2>
+  <div class="chat">
+    <div class="msg m-user"><span class="who">you</span>install zoom</div>
+    <div class="msg m-llm"><span class="who">llm → tool call</span>check_installed(name="zoom")</div>
+    <div class="msg m-tool"><span class="who">tool result</span>NOT INSTALLED: zoom was not found on PATH, in Homebrew, or in /Applications.</div>
+    <div class="msg m-llm"><span class="who">llm → tool call</span>brew_install(name="zoom", cask=true)</div>
+    <div class="msg m-tool"><span class="who">safety layer → you</span>about to run: <b>brew install --cask zoom</b> — run this command? [y/N] <b>y</b></div>
+    <div class="msg m-tool"><span class="who">tool result</span>exit=0 · zoom was successfully installed!</div>
+    <div class="msg m-file"><span class="who">setup.md · auto-updated</span>+ Zoom (`zoom`) ✅ installed<br>+ 2026-07-03 19:40 installed cask `zoom`</div>
+    <div class="msg m-llm"><span class="who">llm → plain text = done</span>Zoom is installed. Summary: 1 installed, 0 skipped, 0 failed.</div>
+  </div>
+
+  <h2>3 · Why it can't wreck your machine</h2>
+  <div class="guards">
+    <div class="guard"><b>Blocklist</b><p><code>rm -rf /</code>, disk formatting, <code>dd</code> to devices, fork bombs, <code>curl | sh</code> → refused. The refusal is sent <i>back to the model</i> so it changes plan instead of crashing.</p></div>
+    <div class="guard"><b>No sudo, ever</b><p>Homebrew, git, <code>defaults</code>, shell config — everything the agent does works without root. Any sudo request is refused.</p></div>
+    <div class="guard softer"><b>Dry-run</b><p><code>--dry-run</code> shows every command it <i>would</i> run and executes nothing. Preview a whole machine setup risk-free.</p></div>
+    <div class="guard softer"><b>You approve each change</b><p>Every mutating command is printed and waits for <b>y/N</b>. <code>--yes</code> only auto-approves routine brew/git/defaults commands.</p></div>
+  </div>
+
+  <h2>4 · The two layers on a fresh Mac</h2>
+  <div class="step"><div class="num">0</div><div><b>bootstrap.sh — dumb shell, one command</b>A bare Mac has no brew, no Python, no Ollama — the agent can't install its own brain. This script installs exactly those prerequisites (skipping what exists), then hands off.</div></div>
+  <div class="step"><div class="num">1</div><div><b>setup-agent scan</b>Reads the machine (read-only) and generates <code>Setup.md</code>: apps, dev tools, runtimes + versions, git identity, macOS prefs.</div></div>
+  <div class="step"><div class="num">2</div><div><b>setup-agent setup</b>The LLM walks <code>Setup.md</code> section by section: checks each item, installs the gaps, applies git/shell/macOS settings — updating the file as it goes.</div></div>
+  <div class="step"><div class="num">3</div><div><b>Forever after</b>Anything you install through the agent (<code>run</code> / <code>chat</code>) is recorded automatically. When the next laptop comes, your <code>Setup.md</code> is already the recipe.</div></div>
+
+  <p class="foot">SetUp Agent · local-first by design — your machine, your model, your data.</p>
+</div>
+</body>
+</html>

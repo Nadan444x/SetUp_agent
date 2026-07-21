@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.env
+
+# Editors / OS
+.DS_Store
+.idea/
+.vscode/
+
+# The generated system file is user data, not source.
+# Comment the next line out if you want to version your machine profile.
+/Setup.md

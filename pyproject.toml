@@ -1,0 +1,26 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "setup-agent"
+version = "0.1.0"
+description = "A terminal agent that provisions a fresh Windows PC, driven by a local LLM on Ollama and Winget."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Rohit" }]
+keywords = ["ollama", "agent", "local-llm", "windows", "setup", "winget"]
+dependencies = [
+    "ollama>=0.4.7",
+    "typer>=0.12",
+    "rich>=13.7",
+    "pyyaml>=6.0",
+]
+
+[project.scripts]
+setup-agent = "setup_agent.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/setup_agent"]
+
